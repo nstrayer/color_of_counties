@@ -48,28 +48,50 @@ var path = d3.geoPath()
 d3.queue()
     .defer(d3.json, "us.json")
     // .defer(d3.tsv, "unemployment.tsv", function(d) { rateById.set(d.id, +d.rate); })
-    .defer(d3.csv, "counties_with_colors.csv", function(d) { rateById.set(+d.id, d.color); })
+    .defer(d3.csv, "counties_with_colors.csv")
+    // .defer(d3.csv, "counties_with_colors.csv", function(d) { rateById.set(+d.id, d.color); })
     .await(ready);
 
-function ready(error, us) {
+function pad(num, size) {
+    var s = "000000000" + num;
+    return s.substr(s.length-size);
+}
+
+function ready(error, us, colors) {
   if (error) throw error;
+
+
+  colors.forEach(function(d){
+      d.id = +d.id;
+      d.county = pad(d["FIPS.County"], size = 3)
+      d.newID = d["FIPS.State"] + d.county
+      rateById.set(+d.newID, d.color);
+  })
+
+  console.log(colors)
+  console.log(topojson.feature(us, us.objects.counties).features)
+
+  var totalColored = 0
 
   svg.append("g")
       .attr("class", "counties")
     .selectAll("path")
       .data(topojson.feature(us, us.objects.counties).features)
     .enter().append("path")
-      .attr("class", function(d) { return quantize(rateById.get(d.id)); })
+    //   .attr("class", function(d) { return quantize(rateById.get(d.id)); })
       .style("fill", function(d) { return rateById.get(d.id); })
       .each(function(d,i){
-          console.log("id " + d.id + ", color = " + rateById.get(d.id))
+          totalColored = rateById.get(d.id) === undefined ? totalColored : totalColored + 1;
+        //   console.log("id " + d.id + ", color = " + rateById.get(d.id))
       })
       .attr("d", path);
 
-  svg.append("path")
-      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
-      .attr("class", "states")
-      .attr("d", path);
+  console.log(totalColored)
+
+  // svg.append("path")
+  //     .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+  //     .attr("class", "states")
+  //     .attr("d", path);
 }
 
 </script>
